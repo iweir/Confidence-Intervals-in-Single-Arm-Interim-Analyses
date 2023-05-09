@@ -1,0 +1,83 @@
+---
+title: "An Evaluation of Confidence Intervals for a Cumulative Proportion to Enable Decisions at Interim Reviews of Single Arm Clinical Trials"
+subtitle: "A5340 Motivating Example"
+author: "Isabelle R Weir and Linda J Harrison"
+date: "May 8th, 2023"
+output: html_document
+---
+
+### load R packages
+```{r, warning=FALSE}
+library("bpcp")
+library("km.ci")
+library("binom")
+```
+
+### A5340 de-identified interim data
+```{r}
+id <- seq(1,10,1)
+event_weeks <- c(1.571,1.714,2.429,2.714,3.000,3.857,4.000,4.714,8.000,8.000)
+first_7 <- c(1,1,0,0,1,1,1,0,1,1) # first 7 enrolled participants
+event <- c(1,1,1,0,1,1,1,1,1,0)
+egdat <- as.data.frame(cbind(id,event_weeks,event,first_7)) # example dataset
+```
+
+### proportion and confidence interval estimates
+```{r}
+## Greenwood (clog-log) 
+KM      <- survfit(Surv(event_weeks,event)~1,data=egdat,conf.int=0.9,conf.type="log-log")
+p_GW    <- 1-summary(KM, times=8)$surv
+ub_GW   <- 1-summary(KM, times=8)$lower
+lb_GW   <- 1-summary(KM, times=8)$upper
+
+## BPCP (method of moments)
+BPCP     <- bpcpfit(egdat$event_weeks,egdat$event,conf.level=0.9,nmc=0,midp=FALSE)
+p_BPCP   <- 1-BPCP[[1]]$surv[which.max(BPCP[[1]]$R>8)]
+ub_BPCP  <- 1-BPCP[[1]]$lower[which.max(BPCP[[1]]$R>8)]
+lb_BPCP  <- 1-BPCP[[1]]$upper[which.max(BPCP[[1]]$R>8)]
+
+## BPCP Mid P (method of moments)
+BPCPmidp    <- bpcpfit(egdat$event_weeks,egdat$event,conf.level=0.9,nmc=0,midp=TRUE)  
+p_BPCPmidp  <- 1-BPCPmidp[[1]]$surv[which.max(BPCPmidp[[1]]$R>8)]
+ub_BPCPmidp <- 1-BPCPmidp[[1]]$lower[which.max(BPCPmidp[[1]]$R>8)]
+lb_BPCPmidp <- 1-BPCPmidp[[1]]$upper[which.max(BPCPmidp[[1]]$R>8)]
+
+## Rothman-Wilson 
+KM2     <- survfit(Surv(event_weeks,event)~1,data=egdat)
+RW      <- km.ci(KM2,conf.level=0.9,method="rothman")
+p_RW    <- 1-summary(RW, times=8)$surv
+ub_RW   <- 1-summary(RW, times=8)$lower 
+lb_RW   <- 1-summary(RW, times=8)$upper 
+
+## Thomas-Grunkemeier 
+TG     <- kmci1TG(egdat$event_weeks,egdat$event,alpha=0.1,tstar=8)
+p_TG   <- 1-summary(TG, times=8)$surv
+ub_TG  <- 1-summary(TG, times=8)$lower 
+lb_TG  <- 1-summary(TG, times=8)$upper
+
+## Restrict data to those >= 8 weeks from enrollment
+egdat_simple <- egdat[which(egdat$first_7==1),] # first 7 equivalent to those >= 8 weeks from enrollment
+
+# Clopper-Pearson 
+CP    <- binom.confint(x=sum(1-egdat_simple$event),n=nrow(egdat_simple),conf.level=0.9,methods="exact")
+p_CP  <- 1-CP$mean
+ub_CP <- 1-CP[which(CP$method=="exact"),]$lower
+lb_CP <- 1-CP[which(CP$method=="exact"),]$upper
+
+# Wilson
+W    <- binom.confint(x=sum(1-egdat_simple$event),n=nrow(egdat_simple),conf.level=0.9,methods="wilson")
+p_W  <- 1-W$mean
+ub_W <- 1-W[which(W$method=="wilson"),]$lower
+lb_W <- 1-W[which(W$method=="wilson"),]$upper
+```
+
+### virologic failure by week 8 percent (90% CI)
+```{r}
+prop <- c(p_GW,p_BPCP,p_BPCPmidp,p_RW,p_TG,p_CP,p_W)
+upper <- c(ub_GW,ub_BPCP,ub_BPCPmidp,ub_RW,ub_TG,ub_CP,ub_W)
+lower <- c(lb_GW,lb_BPCP,lb_BPCPmidp,lb_RW,lb_TG,lb_CP,lb_W)
+prop_CI <- paste0(100*round(prop,2)," (",100*round(lower,2),",",100*round(upper,2),")")
+names(prop_CI) <- c("Greenwood (clog-log)","BPCP","BPCP Mid P","Rothman-Wilson",
+                    "Thomas-Grunkemeier","Clopper-Pearson","Wilson")
+prop_CI
+```
