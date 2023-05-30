@@ -1,17 +1,12 @@
----
-title: "An Evaluation of Confidence Intervals for a Cumulative Proportion to Enable Decisions at Interim Reviews of Single Arm Clinical Trials"
-subtitle: "Confidence Interval Simulation Function and Example"
-author: "Isabelle R. Weir and Linda J. Harrison"
-date: "May 30, 2023"
-output: github_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+An Evaluation of Confidence Intervals for a Cumulative Proportion to
+Enable Decisions at Interim Reviews of Single Arm Clinical Trials
+================
+Isabelle R. Weir and Linda J. Harrison
+May 30, 2023
 
 ### load R packages:
-```{r, warning=FALSE}
+
+``` r
 library(ggplot2)
 library(survival)
 library(km.ci)
@@ -20,12 +15,13 @@ library(bpcp)
 ```
 
 ### Simulation Function (simulateCIs)
-The function takes inputs for sample size (n), fixed time point (tau), 
-maximum censoring time (cens_max), target cumulative proportion (target_CP), 
-alpha type 1 error rate (alpha), and number of replicates 
-for the simulation (nrep). 
 
-```{r}
+The function takes inputs for sample size (n), fixed time point (tau),
+maximum censoring time (cens_max), target cumulative proportion
+(target_CP), alpha type 1 error rate (alpha), and number of replicates
+for the simulation (nrep).
+
+``` r
 simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
 
      method          <- c("Greenwood clog-log",
@@ -221,16 +217,76 @@ simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
 }
 ```
 
-### Use function to obtain results: 
-Note: we recommend to use nrep=100,000 but use 1000 here to reduce computation time. 
+### Use function to obtain results:
 
-```{r}
+Note: we recommend to use nrep=100,000 but use 1000 here to reduce
+computation time.
+
+``` r
 example1output <- simulateCIs(n=50, tau=8, cens_max=10, target_CP=0.2, alpha=0.05, nrep=1000)
+```
+
+    ## [1] "Scenario 1 of 1; n=50; targetCP=0.2"
+    ## [1] "2023-05-30 11:02:51 EDT"
+
+``` r
 example1output
 ```
 
+    ##   scenID  n alpha CPt1    cProp  sProp             method lberr uberr
+    ## 1      1 50  0.05  0.2 0.199441 0.2019 Greenwood clog-log 0.029 0.021
+    ## 2      1 50  0.05  0.2 0.199441 0.2019 Thomas-Grunkemeier 0.022 0.040
+    ## 3      1 50  0.05  0.2 0.199441 0.2019               BPCP 0.009 0.000
+    ## 4      1 50  0.05  0.2 0.199441 0.2019         BPCP Mid P 0.016 0.000
+    ## 5      1 50  0.05  0.2 0.199441 0.2019     Rothman Wilson 0.023 0.031
+    ## 6      1 50  0.05  0.2 0.199441 0.2019    Clopper Pearson 0.007 0.000
+    ## 7      1 50  0.05  0.2 0.199441 0.2019             Wilson 0.032 0.000
+
 You can also input multiple values for each parameter:
-```{r}
+
+``` r
 example2output <- simulateCIs(n=c(25,50), tau=8, cens_max=10, target_CP=c(0.2, 0.5), alpha=0.05, nrep=1000)
+```
+
+    ## [1] "Scenario 1 of 4; n=25; targetCP=0.2"
+    ## [1] "2023-05-30 11:03:36 EDT"
+    ## [1] "Scenario 2 of 4; n=50; targetCP=0.2"
+    ## [1] "2023-05-30 11:04:04 EDT"
+    ## [1] "Scenario 3 of 4; n=25; targetCP=0.5"
+    ## [1] "2023-05-30 11:04:50 EDT"
+    ## [1] "Scenario 4 of 4; n=50; targetCP=0.5"
+    ## [1] "2023-05-30 11:05:20 EDT"
+
+``` r
 example2output
 ```
+
+    ##    scenID  n alpha CPt1     cProp  sProp             method lberr uberr
+    ## 1       1 25  0.05  0.2 0.2023872 0.2032 Greenwood clog-log 0.028 0.032
+    ## 2       1 25  0.05  0.2 0.2023872 0.2032 Thomas-Grunkemeier 0.021 0.071
+    ## 3       1 25  0.05  0.2 0.2023872 0.2032               BPCP 0.009 0.000
+    ## 4       1 25  0.05  0.2 0.2023872 0.2032         BPCP Mid P 0.018 0.000
+    ## 5       1 25  0.05  0.2 0.2023872 0.2032     Rothman Wilson 0.024 0.044
+    ## 6       1 25  0.05  0.2 0.2023872 0.2032    Clopper Pearson 0.004 0.000
+    ## 7       1 25  0.05  0.2 0.2023872 0.2032             Wilson 0.062 0.000
+    ## 8       2 50  0.05  0.2 0.2010829 0.1991 Greenwood clog-log 0.028 0.023
+    ## 9       2 50  0.05  0.2 0.2010829 0.1991 Thomas-Grunkemeier 0.022 0.060
+    ## 10      2 50  0.05  0.2 0.2010829 0.1991               BPCP 0.010 0.000
+    ## 11      2 50  0.05  0.2 0.2010829 0.1991         BPCP Mid P 0.020 0.000
+    ## 12      2 50  0.05  0.2 0.2010829 0.1991     Rothman Wilson 0.025 0.034
+    ## 13      2 50  0.05  0.2 0.2010829 0.1991    Clopper Pearson 0.009 0.000
+    ## 14      2 50  0.05  0.2 0.2010829 0.1991             Wilson 0.030 0.000
+    ## 15      3 25  0.05  0.5 0.4934831 0.4974 Greenwood clog-log 0.047 0.025
+    ## 16      3 25  0.05  0.5 0.4934831 0.4974 Thomas-Grunkemeier 0.019 0.046
+    ## 17      3 25  0.05  0.5 0.4934831 0.4974               BPCP 0.008 0.000
+    ## 18      3 25  0.05  0.5 0.4934831 0.4974         BPCP Mid P 0.018 0.001
+    ## 19      3 25  0.05  0.5 0.4934831 0.4974     Rothman Wilson 0.037 0.046
+    ## 20      3 25  0.05  0.5 0.4934831 0.4974    Clopper Pearson 0.000 0.000
+    ## 21      3 25  0.05  0.5 0.4934831 0.4974             Wilson 0.028 0.033
+    ## 22      4 50  0.05  0.5 0.5023320 0.4991 Greenwood clog-log 0.034 0.028
+    ## 23      4 50  0.05  0.5 0.5023320 0.4991 Thomas-Grunkemeier 0.034 0.037
+    ## 24      4 50  0.05  0.5 0.5023320 0.4991               BPCP 0.019 0.005
+    ## 25      4 50  0.05  0.5 0.5023320 0.4991         BPCP Mid P 0.029 0.011
+    ## 26      4 50  0.05  0.5 0.5023320 0.4991     Rothman Wilson 0.023 0.044
+    ## 27      4 50  0.05  0.5 0.5023320 0.4991    Clopper Pearson 0.013 0.016
+    ## 28      4 50  0.05  0.5 0.5023320 0.4991             Wilson 0.013 0.016
