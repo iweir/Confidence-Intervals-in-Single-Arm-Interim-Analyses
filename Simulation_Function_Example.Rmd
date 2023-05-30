@@ -1,0 +1,236 @@
+---
+title: "An Evaluation of Confidence Intervals for a Cumulative Proportion to Enable Decisions at Interim Reviews of Single Arm Clinical Trials"
+subtitle: "Confidence Interval Simulation Function and Example"
+author: "Isabelle R. Weir and Linda J. Harrison"
+date: "May 30, 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### load R packages:
+```{r, warning=FALSE}
+library(ggplot2)
+library(survival)
+library(km.ci)
+library(binom) 
+library(bpcp)
+```
+
+### Simulation Function (simulateCIs)
+The function takes inputs for sample size (n), fixed time point (tau), 
+maximum censoring time (cens_max), target cumulative proportion (target_CP), 
+alpha type 1 error rate (alpha), and number of replicates 
+for the simulation (nrep). 
+
+```{r}
+simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
+
+     method          <- c("Greenwood clog-log",
+                          "Thomas-Grunkemeier",
+                          "BPCP",
+                          "BPCP Mid P",
+                          "Rothman Wilson",
+                          "Clopper-Pearson",
+                          "Wilson")
+     
+     ## compile scenarios based on function inputs:
+     scenarios        <- expand.grid(n=n, 
+                                     tau=tau,
+                                     alpha=alpha,
+                                     #exp_rate=exp_rate,
+                                     target_CP=target_CP,
+                                     cens_max=cens_max,
+                                     nrep=nrep)
+     
+     scenarios$exp_rate <- c(log(1-scenarios$target_CP)/(-scenarios$tau))
+     scenarios$scenID   <- 1:nrow(scenarios)
+     scenarios
+     
+     ## prepare empty results dataframe
+     allresults <- data.frame(scenID=numeric(), 
+                              ENt=numeric(),
+                              EYt=numeric(),
+                              n=numeric(),
+                              alpha=numeric(),
+                              CPt1=numeric(),
+                              method=character(),
+                              lberr=numeric(),
+                              uberr=numeric(), stringsAsFactors = FALSE)
+     
+     for(i in scenarios$scenID){
+          
+          print(paste0("Scenario ", i, " of ", nrow(scenarios), "; n=", scenarios$n[i], "; targetCP=", scenarios$target_CP[i]))
+          print(Sys.time())
+          
+          result_i <- data.frame(scenID=numeric(length(method)), 
+                                 n=numeric(length(method)),
+                                 alpha=numeric(length(method)),
+                                 CPt1=numeric(length(method)),
+                                 cProp=numeric(length(method)),
+                                 sProp=numeric(length(method)),
+                                 method=character(length(method)),
+                                 lberr=numeric(length(method)),
+                                 uberr=numeric(length(method)), stringsAsFactors = FALSE)
+          
+          columns <- c("cProp", "sProp",
+                       "lb_GW", "ub_GW", 
+                       "lb_TG", "ub_TG",
+                       "lb_BPCP", "ub_BPCP", 
+                       "lb_BPCPmidp", "ub_BPCPmidp", 
+                       "lb_RW", "ub_RW", 
+                       "lb_Clopper", "ub_Clopper", 
+                       "lb_W", "ub_W") 
+          
+          temp <- data.frame(matrix(nrow=nrep, ncol=length(columns)))
+          colnames(temp) <- columns
+          
+          St1 <- exp(-(scenarios$exp_rate[i])*scenarios$tau[i])
+     
+          for(r in 1:nrep){
+               
+               # data generation with censoring
+               E      <- rexp(n=scenarios$n[i], rate=scenarios$exp_rate[i])
+               C1      <- runif(n=0.8*scenarios$n[i], 0, 8)
+               C2      <- runif(n=0.2*scenarios$n[i], 8, 10)
+               C       <- c(C1, C2)
+               time   <- pmin(E, C)
+               status <- as.numeric(E<=C)
+               simdat <- data.frame(time=time, event=status, followup=C)
+               
+               ### CONFIDENCE INTERVALS FOR CUMULATIVE PROBABILITY
+               
+               # Greenwood clog-log 
+               ## if no events before tau, then CI for cum prob is (0,0)
+               ## if all events occur before tau, then CI for cum prob is (1,1)
+               KM                  <- survfit(Surv(time, event)~1, data=simdat, 
+                                              conf.int=1-scenarios$alpha[i], 
+                                              conf.type="log-log")
+               
+               temp$lb_GW[r]       <- ifelse(sum(simdat[which(simdat$time<scenarios$tau[i]),]$event)==0, 0,
+                                             ifelse(max(KM$time) < scenarios$tau[i], 1, 
+                                                    1-summary(KM, times=scenarios$tau[i])$upper ))
+               
+               temp$ub_GW[r]       <- ifelse(sum(simdat[which(simdat$time<scenarios$tau[i]),]$event)==0, 0,
+                                             ifelse(max(KM$time) < scenarios$tau[i], 1, 
+                                                    1-summary(KM, times=scenarios$tau[i])$lower ))
+               
+               # save the cumulative proportion estimate
+               temp$cProp[r] <- ifelse( max(KM$time) < scenarios$tau[i], 1-min(summary(KM)$surv), 
+                                        1-summary(KM, times=scenarios$tau[i])$surv)
+               
+               ## Rothman-Wilson Score method
+               ## if no events, then CI for cum prob is (0,0) automatically
+               ## if ALL events occur before tau, then CI for cum prob is (1,1)
+               KM2                 <- survfit(Surv(time, event)~1, conf.int=1-scenarios$alpha[i], data=simdat)
+               
+               RW                  <- km.ci(KM2, conf.level=1-scenarios$alpha[i], method="rothman")
+               
+               temp$lb_RW[r]       <- ifelse(max(RW$time) < scenarios$tau[i], 1, 
+                                             1-summary(RW, times=scenarios$tau[i])$upper )
+               
+               temp$ub_RW[r]       <- ifelse(max(RW$time) < scenarios$tau[i], 1, 
+                                             1-summary(RW, times=scenarios$tau[i])$lower )
+               
+               ## Thomas-Grunkemeier
+               ## if no events, then CI for cum prob is (0,0) automatically with kmci1TG
+               ## if ALL events occur before tau, then CI for cum prob is (1,1)
+               TG                 <- kmci1TG(simdat$time, simdat$event, alpha=scenarios$alpha[i], tstar=scenarios$tau[i])
+               
+               temp$lb_TG[r]      <- ifelse(max(TG$time) < scenarios$tau[i], 1, 
+                                            1-summary(TG, times=scenarios$tau[i])$upper)
+               
+               temp$ub_TG[r]      <- ifelse(max(TG$time) < scenarios$tau[i], 1, 
+                                            1-summary(TG, times=scenarios$tau[i])$lower)
+               
+               ## BPCP (method of moments)
+               BPCP                <- bpcpfit(simdat$time, simdat$event, conf.level=1-scenarios$alpha[i], nmc=0, midp=FALSE)
+               temp$lb_BPCP[r]     <- 1-BPCP[[1]]$upper[which.max(BPCP[[1]]$R>scenarios$tau[i])]
+               temp$ub_BPCP[r]     <- 1-BPCP[[1]]$lower[which.max(BPCP[[1]]$R>scenarios$tau[i])]
+               
+               ## BPCP Mid P
+               BPCPmidp            <- bpcpfit(simdat$time, simdat$event, conf.level=1-scenarios$alpha[i], nmc=0, midp=TRUE)          
+               temp$lb_BPCPmidp[r] <- 1-BPCPmidp[[1]]$upper[which.max(BPCPmidp[[1]]$R>scenarios$tau[i])]
+               temp$ub_BPCPmidp[r] <- 1-BPCPmidp[[1]]$lower[which.max(BPCPmidp[[1]]$R>scenarios$tau[i])]
+     
+               ### CONFIDENCE INTERVALS FOR SIMPLE PROPORTION
+               
+               ##  analyse those participants with follow up beyond tau 
+               nevent <- sum(simdat[which(simdat$followup > scenarios$tau[i] & simdat$time <= scenarios$tau[i]),"event"])
+               denom  <- nrow(simdat[which(simdat$followup > scenarios$tau[i]),])
+               
+               temp$sProp[r] <- nevent/denom
+               
+               prop          <- binom.confint(x=nevent, n=denom, 
+                                              conf.level=1-scenarios$alpha[i], methods=c("exact", "wilson"))
+               
+               temp$lb_Clopper[r] <- prop[which(prop$method=="exact"),]$lower
+               temp$ub_Clopper[r] <- prop[which(prop$method=="exact"),]$upper
+               
+               temp$lb_W[r]  <- prop[which(prop$method=="wilson"),]$lower
+               temp$ub_W[r]  <- prop[which(prop$method=="wilson"),]$upper
+               
+          }
+          
+          CPt1 <- scenarios$target_CP[i]
+          
+          # save information:
+          result_i$scenID   <- scenarios$scenID[i]
+          result_i$n        <- scenarios$n[i]
+          result_i$alpha    <- scenarios$alpha[i]
+          result_i$CPt1     <- scenarios$target_CP[i]
+          result_i$cProp    <- mean(temp$cProp)
+          result_i$sProp    <- mean(temp$sProp)
+          
+          result_i$method[1]   <- "Greenwood clog-log"
+          result_i$lberr[1]    <- mean(temp$lb_GW>CPt1, na.rm=TRUE)
+          result_i$uberr[1]    <- mean(temp$ub_GW<CPt1, na.rm=TRUE)
+          
+          result_i$method[2]   <- "Thomas-Grunkemeier"
+          result_i$lberr[2]    <- mean(temp$lb_TG>CPt1, na.rm=TRUE)
+          result_i$uberr[2]    <- mean(temp$ub_TG<CPt1, na.rm=TRUE)
+          
+          result_i$method[3]   <- "BPCP"
+          result_i$lberr[3]    <- mean(temp$lb_BPCP>CPt1, na.rm=TRUE)
+          result_i$uberr[3]    <- mean(temp$ub_BPCP<CPt1, na.rm=TRUE)
+          
+          result_i$method[4]   <- "BPCP Mid P"
+          result_i$lberr[4]    <- mean(temp$lb_BPCPmidp>CPt1, na.rm=TRUE)
+          result_i$uberr[4]    <- mean(temp$ub_BPCPmidp<CPt1, na.rm=TRUE)
+          
+          result_i$method[5]   <- "Rothman Wilson"
+          result_i$lberr[5]    <- mean(temp$lb_RW>CPt1, na.rm=TRUE)
+          result_i$uberr[5]    <- mean(temp$ub_RW<CPt1, na.rm=TRUE)
+          
+          result_i$method[6]   <- "Clopper Pearson"
+          result_i$lberr[6]    <- mean(temp$lb_Clopper>CPt1, na.rm=TRUE)
+          result_i$uberr[6]    <- mean(temp$ub_Clopper<CPt1, na.rm=TRUE)
+          
+          result_i$method[7]   <- "Wilson"
+          result_i$lberr[7]    <- mean(temp$lb_W>CPt1, na.rm=TRUE)
+          result_i$uberr[7]    <- mean(temp$ub_W<CPt1, na.rm=TRUE)
+          
+          allresults <- rbind(allresults, result_i)
+          
+     }
+     
+     return(allresults)
+
+}
+```
+
+### Use function to obtain results: 
+Note: we recommend to use nrep=100,000 but use 1000 here to reduce computation time. 
+
+```{r}
+example1output <- simulateCIs(n=50, tau=8, cens_max=10, target_CP=0.2, alpha=0.05, nrep=1000)
+example1output
+```
+
+You can also input multiple values for each parameter:
+```{r}
+example2output <- simulateCIs(n=c(25,50), tau=8, cens_max=10, target_CP=c(0.2, 0.5), alpha=0.05, nrep=1000)
+example2output
+```
