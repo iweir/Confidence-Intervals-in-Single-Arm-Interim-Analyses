@@ -1,20 +1,27 @@
----
-title: "An Evaluation of Confidence Intervals for a Cumulative Proportion to Enable Decisions at Interim Reviews of Single Arm Clinical Trials"
-subtitle: "A5340 Motivating Example"
-author: "Isabelle R. Weir and Linda J. Harrison"
-date: "June 12th, 2023"
-output: github_document
----
+An Evaluation of Confidence Intervals for a Cumulative Proportion to
+Enable Decisions at Interim Reviews of Single Arm Clinical Trials
+================
+Isabelle R. Weir and Linda J. Harrison
+June 12th, 2023
 
 ### load R packages
-```{r, warning=FALSE}
+
+``` r
 library("bpcp")
+```
+
+    ## Loading required package: survival
+
+    ## Loading required package: ggplot2
+
+``` r
 library("km.ci")
 library("binom")
 ```
 
 ### A5340 de-identified interim data
-```{r}
+
+``` r
 id <- seq(1,10,1)
 event_weeks <- c(1.571,1.714,2.429,2.714,3.000,3.857,4.000,4.714,8.000,8.000)
 first_7 <- c(1,1,0,0,1,1,1,0,1,1) # first 7 enrolled participants
@@ -23,7 +30,8 @@ egdat <- as.data.frame(cbind(id,event_weeks,event,first_7)) # example dataset
 ```
 
 ### proportion and confidence interval estimates
-```{r}
+
+``` r
 ## Greenwood (clog-log) 
 KM      <- survfit(Surv(event_weeks,event)~1,data=egdat,conf.int=0.9,conf.type="log-log")
 p_GW    <- 1-summary(KM, times=8)$surv
@@ -72,7 +80,8 @@ lb_W <- 1-W[which(W$method=="wilson"),]$upper
 ```
 
 ### virologic failure by week 8 percent (90% CI)
-```{r}
+
+``` r
 prop <- c(p_GW,p_BPCP,p_BPCPmidp,p_RW,p_TG,p_CP,p_W)
 upper <- c(ub_GW,ub_BPCP,ub_BPCPmidp,ub_RW,ub_TG,ub_CP,ub_W)
 lower <- c(lb_GW,lb_BPCP,lb_BPCPmidp,lb_RW,lb_TG,lb_CP,lb_W)
@@ -81,3 +90,10 @@ names(prop_CI) <- c("Greenwood (clog-log)","BPCP","BPCP Mid P","Rothman-Wilson",
                     "Thomas-Grunkemeier","Clopper-Pearson","Wilson")
 prop_CI
 ```
+
+    ## Greenwood (clog-log)                 BPCP           BPCP Mid P 
+    ##         "88 (65,99)"        "88 (56,100)"        "88 (62,100)" 
+    ##       Rothman-Wilson   Thomas-Grunkemeier      Clopper-Pearson 
+    ##         "88 (61,97)"         "88 (64,99)"         "86 (48,99)" 
+    ##               Wilson 
+    ##         "86 (55,97)"
