@@ -4,7 +4,7 @@ _(under consideration by peer-reviewed journal editors, citation pending and wil
 
 # R code for the motivating example
 example_code.Rmd  
-example_code.html
+example_code.md
 
 # R code for implementation (simulation and example)
 Simulation_Function_Example.Rmd  
