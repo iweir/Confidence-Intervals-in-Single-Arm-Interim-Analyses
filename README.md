@@ -2,7 +2,7 @@
 An evaluation of confidence intervals for a cumulative proportion to enable decisions at interim reviews of single arm clinical trials
 _(under consideration by peer-reviewed journal editors, citation pending and will be added upon acceptance)_
 
-Review of the .md files first to learn how to implement the methods is recommeded
+Review of the .md files to learn how to implement the methods is recommeded
 
 # R code for the motivating example
 example_code.Rmd  
