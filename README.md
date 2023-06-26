@@ -9,3 +9,5 @@ example_code.md
 # R code for implementation (simulation and example)
 Simulation_Function_Example.Rmd  
 Simulation_Function_Example.md
+
+# Review of the .md files first to learn how to implement the methods is recommeded
