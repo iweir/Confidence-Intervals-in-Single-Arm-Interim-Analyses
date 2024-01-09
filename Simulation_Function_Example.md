@@ -19,7 +19,11 @@ library(bpcp)
 The function takes inputs for sample size (n), fixed time point (tau),
 maximum censoring time (cens_max), target cumulative proportion
 (target_CP), alpha type 1 error rate (alpha), and number of replicates
-for the simulation (nrep).
+for the simulation (nrep). 
+The function uses a uniform censoring pattern from 0 to week 8 (see C1 in line 97). To replicate the linear upwards and linear downwards censoring patterns, we replace C1 with the following:\
+Linear Upwards: C1 <- sqrt(64\*runif(n=0.8\*scenarios$n[i]))\
+Linear Downwards: C1 <- 8-sqrt(64\*runif(n=0.8\*scenarios$n[i]))\
+A user can toggle the code to use these patterns in lines 99 and 101. 
 
 ``` r
 simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
@@ -88,8 +92,14 @@ simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
           for(r in 1:nrep){
                
                # data generation with censoring
-               E      <- rexp(n=scenarios$n[i], rate=scenarios$exp_rate[i])
+               E       <- rexp(n=scenarios$n[i], rate=scenarios$exp_rate[i])
+               # Uniform Censoring
                C1      <- runif(n=0.8*scenarios$n[i], 0, 8)
+               # Linear Upwards Censoring 
+               # C1    <- sqrt(64*runif(n=0.8*scenarios$n[i]))
+               # Linear Downwards Censoring 
+               # C1    <- 8-sqrt(64*runif(n=0.8*scenarios$n[i-169]))
+
                C2      <- runif(n=0.2*scenarios$n[i], 8, 10)
                C       <- c(C1, C2)
                time   <- pmin(E, C)
