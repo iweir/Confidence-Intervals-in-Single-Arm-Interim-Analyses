@@ -2,7 +2,7 @@ An Evaluation of Confidence Intervals for a Cumulative Proportion to
 Enable Decisions at Interim Reviews of Single Arm Clinical Trials
 ================
 Isabelle R. Weir and Linda J. Harrison
-May 30, 2023
+Janyary 9, 2024
 
 ### load R packages:
 
@@ -20,10 +20,10 @@ The function takes inputs for sample size (n), fixed time point (tau),
 maximum censoring time (cens_max), target cumulative proportion
 (target_CP), alpha type 1 error rate (alpha), and number of replicates
 for the simulation (nrep). 
-The function uses a uniform censoring pattern from 0 to week 8 (see C1 in line 97). To replicate the linear upwards and linear downwards censoring patterns, we replace C1 with the following:\
+The function uses a uniform censoring pattern from 0 to week 8 (see C1 defined in the code below). To replicate the linear upwards and linear downwards censoring patterns, we replace C1 with the following:\
 Linear Upwards: C1 <- sqrt(64\*runif(n=0.8\*scenarios$n[i]))\
 Linear Downwards: C1 <- 8-sqrt(64\*runif(n=0.8\*scenarios$n[i]))\
-A user can toggle the code to use these patterns in lines 99 and 101. 
+A user can toggle the code to use these patterns in the code below.
 
 ``` r
 simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
@@ -98,7 +98,7 @@ simulateCIs <- function(n, tau, cens_max, target_CP, alpha, nrep){
                # Linear Upwards Censoring 
                # C1    <- sqrt(64*runif(n=0.8*scenarios$n[i]))
                # Linear Downwards Censoring 
-               # C1    <- 8-sqrt(64*runif(n=0.8*scenarios$n[i-169]))
+               # C1    <- 8-sqrt(64*runif(n=0.8*scenarios$n[i]))
 
                C2      <- runif(n=0.2*scenarios$n[i], 8, 10)
                C       <- c(C1, C2)
