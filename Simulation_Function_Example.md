@@ -2,7 +2,7 @@ An Evaluation of Confidence Intervals for a Cumulative Proportion to
 Enable Decisions at Interim Reviews of Single Arm Clinical Trials
 ================
 Isabelle R. Weir and Linda J. Harrison
-Janyary 9, 2024
+January 9, 2024
 
 ### load R packages:
 
